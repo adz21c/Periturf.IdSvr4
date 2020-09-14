@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+using Microsoft.AspNetCore.Http;
 using Periturf.Hosting.Setup;
 using Periturf.IdSvr4.Setup;
+using Periturf.Web.Setup;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -26,20 +28,17 @@ namespace Periturf
     [ExcludeFromCodeCoverage]
     public static class GenericHostExtensions
     {
-        public static void IdSvr4(this IGenericHostConfigurator configurator, Action<IIdSvr4SetupConfigurator>? config = null)
+        public static void IdSvr4(this IWebSetupConfigurator configurator, Action<IIdSvr4SetupConfigurator>? config = null)
         {
-            configurator.IdSvr4("IdSvr4", config);
+            configurator.IdSvr4("IdSvr4", "/IdSvr4", config);
         }
 
-        public static void IdSvr4(this IGenericHostConfigurator configurator, string name, Action<IIdSvr4SetupConfigurator>? config = null)
+        public static void IdSvr4(this IWebSetupConfigurator configurator, string name, PathString path, Action<IIdSvr4SetupConfigurator>? config = null)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentNullException(nameof(name));
-
-            var spec = new IdSvr4SetupSpecification(name);
+            var spec = new IdSvr4SetupSpecification(name, path);
             config?.Invoke(spec);
 
-            configurator.AddComponentSpecification(spec);
+            configurator.AddWebComponentSpecification(spec);
         }
     }
 }
