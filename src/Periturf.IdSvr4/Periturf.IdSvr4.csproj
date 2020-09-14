@@ -19,8 +19,7 @@
   <ItemGroup>
     <PackageReference Include="IdentityModel" Version="3.10.10" />
     <PackageReference Include="IdentityServer4" Version="2.5.3" />
-    <PackageReference Include="Periturf" Version="0.5.0" />
-    <PackageReference Include="Periturf.Hosting" Version="0.5.0" />
+    <PackageReference Include="Periturf.Web" Version="0.6.0-develop0005" />
   </ItemGroup>
 
 </Project>

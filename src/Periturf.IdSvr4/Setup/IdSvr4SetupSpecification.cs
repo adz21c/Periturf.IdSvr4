@@ -18,6 +18,7 @@ using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Periturf.Components;
@@ -25,20 +26,24 @@ using Periturf.Hosting.Setup;
 using Periturf.IdSvr4.Clients;
 using Periturf.IdSvr4.Configuration;
 using Periturf.IdSvr4.Verify;
+using Periturf.Web.Setup;
 using System;
 using System.Linq;
 using System.Net.Http;
 
 namespace Periturf.IdSvr4.Setup
 {
-    class IdSvr4SetupSpecification : IGenericHostComponentSpecification, IIdSvr4SetupConfigurator
+    class IdSvr4SetupSpecification : IWebComponentSetupSpecification, IIdSvr4SetupConfigurator
     {
-        public IdSvr4SetupSpecification(string name)
+        public IdSvr4SetupSpecification(string name, PathString path)
         {
             Name = name;
+            Path = path;
         }
 
         public string Name { get; }
+
+        public PathString Path { get; }
 
         public IdentityServerMiddlewareOptions? IdentityServerOptions { get; private set; }
 
@@ -47,55 +52,36 @@ namespace Periturf.IdSvr4.Setup
             IdentityServerOptions = options;
         }
 
-        public IComponent Apply(IHostBuilder hostBuilder)
+        public ConfigureWebAppDto Configure()
         {
             var eventMonitorSink = new EventMonitorSink();
             var store = new Store();
-
-            hostBuilder.ConfigureServices(services =>
-            {
-                services
-                    .AddSingleton<IClientStore, Store>(sp => store)
-                    .AddSingleton<IResourceStore, Store>(sp => store)
-                    .AddSingleton<IEventSink, EventMonitorSink>(sp => eventMonitorSink);
-
-                services
-                    .AddIdentityServer(i =>
-                    {
-                        i.Events.RaiseErrorEvents = true;
-                        i.Events.RaiseFailureEvents = true;
-                        i.Events.RaiseInformationEvents = true;
-                        i.Events.RaiseSuccessEvents = true;
-                    })
-                    .AddDeveloperSigningCredential();
-            });
-
-            Uri? baseAddress = null;
-            hostBuilder.ConfigureWebHostDefaults(w =>
-            {
-                w.UseUrls("http://localhost:3501");
-                var urls = w.GetSetting("urls");
-                var url = urls.Split(';')
-                    .Select(x => x.Replace("*", "localhost"))
-                    .Select(x => new
-                    {
-                        Url = x,
-                        Rank = x.Contains("localhost") ? 0 : 1
-                    })
-                    .OrderBy(x => x.Rank)
-                    .Select(x => x.Url)
-                    .First();
-                baseAddress = new Uri(url);
-
-                w.Configure((wctx, app) => app.UseIdentityServer(IdentityServerOptions));
-            });
-
-            var httpClient = new HttpClient() { BaseAddress = baseAddress };
+            var httpClient = new HttpClient();
             var client = new ComponentClient(
                 httpClient,
-                new DiscoveryCache(baseAddress.AbsoluteUri.ToLower(), httpClient));
+                new DiscoveryCache("", httpClient));
 
-            return new IdSvr4Component(store, eventMonitorSink, client);
+            var component = new IdSvr4Component(store, eventMonitorSink, client);
+
+            return new ConfigureWebAppDto(
+                component,
+                app => app.UseIdentityServer(IdentityServerOptions),
+                services =>
+                {
+                    services
+                        .AddSingleton<IClientStore, Store>(sp => store)
+                        .AddSingleton<IResourceStore, Store>(sp => store)
+                        .AddSingleton<IEventSink, EventMonitorSink>(sp => eventMonitorSink)
+                        .AddIdentityServer(i =>
+                        {
+                            i.Events.RaiseErrorEvents = true;
+                            i.Events.RaiseFailureEvents = true;
+                            i.Events.RaiseInformationEvents = true;
+                            i.Events.RaiseSuccessEvents = true;
+                        })
+                        .AddDeveloperSigningCredential();
+                });
+
         }
     }
 }

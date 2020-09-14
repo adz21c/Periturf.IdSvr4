@@ -36,7 +36,10 @@ namespace Periturf.Tests.Integration.IdSvr4
             {
                 e.GenericHost(h =>
                 {
-                    h.IdSvr4();
+                    h.Web(w =>
+                    {
+                        w.IdSvr4();
+                    });
                 });
             });
 
